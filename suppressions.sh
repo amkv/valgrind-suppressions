@@ -1,29 +1,58 @@
 #!/bin/zsh
 
-#name of the suppressions file
-FILENAME="suppressions.txt"
+
 #executable name
-NAME="hercules"
-#temp file
-TEMP="tempfile.txt"
-# valgrind location
-VAL=/Volumes/Storage/goinfre/akalmyko/homebrew/Cellar/valgrind/3.12.0/bin/valgrind
+echo $#
+if [ $# == 1 ]; then
+    NAME=$1
+else
+    NAME="a.out"
+fi
+###############################################################################
+# constant variables
+###############################################################################
+GCC=/usr/bin/gcc
+VALGRIND=$HOME/goinfre/brew/bin/valgrind
+RMF=/bin/rm
+SUPFILE="sup.txt"
 
-#compile the executable
-#sh compile.sh
+###############################################################################
+# generating fresh suppressions file
+###############################################################################
 
-# generate file
-$VAL --gen-suppressions=all --leak-check=full --show-leak-kinds=all ./$NAME 2>./$TEMP
+# clear
+if [ -a $SUPFILE ]; then
+    echo valgrind will use $SUPFILE
+else
+    # name of the suppressions file
+    SUPTEMP="sup_temp.txt"
+    # temp main.c file
+    MAINTEMP="mtemp.c"
+    # temp bin file
+    BINTEMP="mtemp"
+    # creating main file
+    echo "creating main file"
+    echo "int main(void) {return 0;}" > $MAINTEMP
+    # compiling main file
+    echo "compiling main file"
+    $GCC $MAINTEMP -o $BINTEMP
+    # generating suppression file
+    echo "generating suppression file"
+    $VALGRIND --gen-suppressions=all --leak-check=full --show-leak-kinds=all ./$BINTEMP 2>./$SUPTEMP
+    # cleaning suppression file: delete all == and --
+    echo "cleaning suppression file"
+    cat $SUPTEMP | grep -v "==" | grep -v "\-\-" | grep -v "warning" > $SUPFILE
+    # deleting all temp files
+    echo "deleting all temp files"
+    $RMF $SUPTEMP
+    $RMF $MAINTEMP
+    $RMF $BINTEMP
+fi
+###############################################################################
 
-# delete all == and --
-cat $TEMP | grep -v "==" | grep -v "\-\-" | grep -v "warning" > $FILENAME
-
-# delete temp file
-rm $TEMP
-clear
-
-# use valgrind again, with the suppressions file
-#$VAL --suppressions=./$FILENAME ./$NAME
-
-# delete text file
-#rm $FILENAME
+#use valgrind again, with the suppressions file
+if [ -a $NAME ]; then
+    $VALGRIND --suppressions=./$SUPFILE ./$NAME
+else
+    echo $NAME not found
+fi
