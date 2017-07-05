@@ -2,7 +2,6 @@
 
 
 #executable name
-echo $#
 if [ $# == 1 ]; then
     NAME=$1
 else
